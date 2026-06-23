@@ -316,6 +316,53 @@ services:
     depends_on:
       - free5gc-n3iwf
 
+  oai-gnb:
+    container_name: oai-gnb
+    # Local build image (AVX-512 disabled for i5-8265U)
+    # Build: cd oai/ && bash build-oai-local.sh
+    image: oai-gnb-local
+    # Use entrypoint.sh via USE_ADDITIONAL_OPTIONS (entrypoint auto-adds -O config)
+    environment:
+      - USE_ADDITIONAL_OPTIONS=--sa --rfsim
+      - TZ=Asia/Taipei
+    volumes:
+      - ./oai/gnb.sa.band78.fr1.106PRB.usrpb210.free5gc.conf:/opt/oai-gnb/etc/gnb.conf
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+    networks:
+      privnet:
+        ipv4_address: 10.100.200.200
+        aliases:
+          - oai-gnb.free5gc.org
+    depends_on:
+      - free5gc-amf
+      - free5gc-upf
+
+  oai-ue:
+    container_name: oai-ue
+    # Local build image (AVX-512 disabled for i5-8265U)
+    # Build: cd oai/ && bash build-oai-local.sh
+    image: oai-nr-ue-local
+    # Use entrypoint.sh via USE_ADDITIONAL_OPTIONS
+    environment:
+      - USE_ADDITIONAL_OPTIONS=--rfsim -r 106 --numerology 1 -C 3619200000 --rfsimulator.serveraddr 10.100.200.200
+      - TZ=Asia/Taipei
+    volumes:
+      - ./oai/ue.free5gc.conf:/opt/oai-nr-ue/etc/nr-ue.conf
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+    devices:
+      - "/dev/net/tun"
+    networks:
+      privnet:
+        ipv4_address: 10.100.200.201
+        aliases:
+          - oai-ue.free5gc.org
+    depends_on:
+      - oai-gnb
+
 networks:
   privnet:
     ipam:
